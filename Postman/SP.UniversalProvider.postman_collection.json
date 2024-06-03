@@ -1,0 +1,2940 @@
+{
+	"info": {
+		"_postman_id": "b328f8f9-074f-4a49-8cf8-6a41663a7a00",
+		"name": "SP.UniversalProvider",
+		"description": "Для успешной интеграции с сервисом подписания UniversalProvider должен реализовывать процессы, описанные в коллекции:\n\n- Выпуск сертификата\n- Получение и отзыв сертификата\n- Подписание\n- Работу с опциями подтверждения подписания\n- Проверку здоровья и доверия\n    \n\nВ случае, если провайдер не поддерживает какой-либо из процессов (за исключением подписания и работы с подтверждением подписания), то рекомендуется следующее:\n\n- Возвращать ошибку с кодом **OperationNotSupportedError**\n    \n\n# Описание переменных коллекции:\n\n- **baseUrl** - адрес провайдера\n- **idsUrl** - адрес сервиса идентификации для получения токенов\n- **login** - логин пользователя\n- token - JWT токен, используется для авторизации, заполняется автоматически при выполнении запроса из папки Authorization\n- requestId - идентификатор запроса для выпуска сертификата, заполняется автоматически после создания заявки на выпуск сертификата\n- signingId - идентификатор операции подписания, заполняется автоматически после старта операции подписания\n- certificateId - идентификатор сертификата, заполняется автоматически при получении статуса, после успешного подтверждения выпуска сертификата\n- thumbprint - отпечаток сертификата, заполняется автоматически при получении сертификата\n    \n\nЖирным выделены параметры которые необходимо заполнить для начала работы.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "18672697"
+	},
+	"item": [
+		{
+			"name": "Authorize",
+			"item": [
+				{
+					"name": "Получить сервисный токен",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if(pm.response.code === 200) {\r",
+									"    pm.collectionVariables.set(\"token\", pm.response.text());\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  // Логин пользователя.\r\n  \"login\": \"operator\",\r\n  // Пароль.\r\n  \"password\": \"1Qwerty\",\r\n  // Назначение токена.\r\n  \"audience\": \"CryptoProProxy\",\r\n  // Тип токена.\r\n  \"tokenType\": \"jwt\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{idsUrl}}/api/SignIn/Password"
+					},
+					"response": []
+				}
+			],
+			"description": "Методы для получения JWT токена от IdentityService."
+		},
+		{
+			"name": "Certificate Issue",
+			"item": [
+				{
+					"name": "Создает запрос на выпуск сертификата пользователю.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if(pm.response.code === 200) {\r",
+									"    var response = JSON.parse(responseBody)\r",
+									"    pm.collectionVariables.set(\"requestId\", response.requestId)\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"login\": \"{{login}}\",\n  \"subjectInfo\": {\n    \"firstName\": \"Иван\",\n    \"lastName\": \"Иванов\",\n    \"middleName\": \"Иванович\",\n    \"email\": \"examole@example.com\",\n    \"phoneNumber\": \"79901234567\"\n  },\n  \"identityDocuments\": [\n    {\n      \"identityDocumentType\": \"Passport\",\n      \"series\": \"1234\",\n      \"number\": \"123456\",\n      \"birthDate\": \"2000-04-29\",\n      \"issueDate\": \"2020-09-07\",\n      \"issueOrganizationId\": \"123456\",\n      \"issueOrganization\": \"1234\",\n      \"validityPeriod\": \"2040-09-07\"\n    },\n    {\n      \"identityDocumentType\": \"Inn\",\n      \"number\": \"795194176084\"\n    },\n    {\n      \"identityDocumentType\": \"Snils\",\n      \"number\": \"19129869901\",\n      \"birthDate\": \"2000-04-29\"\n    }\n  ],\n  \"identificationType\": \"Personal\"\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/certificate-issues/create"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  // Логин пользователя.\n  \"login\": \"<string>\",\n  // Информация о субъекте сертификата.\n  \"subjectInfo\": {\n    // Имя субъекта.\n    \"firstName\": \"<string>\",\n\t// Фамилия субъекта.\n    \"lastName\": \"<string>\",\n\t// Отчество субъекта.\n    \"middleName\": \"<string>\",\n\t// Email.\n    \"email\": \"<string>\",\n    // Номер телефона.\n    \"phoneNumber\": \"<string>\"\n  },\n  // Документы идентифицирующие субъект.\n  \"identityDocuments\": [\n    {\n\t  // Тип документа [ \"Passport\", \"OtherIdentity\", \"Inn\", \"Snils\" ].\n      \"identityDocumentType\": \"<string>\",\n\t  // Серия.\n      \"series\": \"<string>\",\n\t  // Номер.\n      \"number\": \"<string>\",\n\t  // Дата рождения.\n      \"birthDate\": \"<dateTime>\",\n\t  // Дата выдачи документа.\n      \"issueDate\": \"<dateTime>\",\n\t  // Код подразделения.\n      \"issueOrganizationId\": \"<string>\",\n\t  // Кем выдан документ.\n      \"issueOrganization\": \"<string>\",\n\t  // Срок действия документа.\n      \"validityPeriod\": \"<dateTime>\"\n    }\n  ],\n  // Тип идентификации [ \"Personal\", \"ESIA\" ].\n  \"identificationType\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "http://ca.foxtrot.comp.npo:6025/certificate-issues/create"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"requestId\": \"<integer>\",\n    \"certificateId\": null,\n    \"status\": \"NeedConfirm\",\n    \"error\": null\n}"
+						},
+						{
+							"name": "Bad Request (ValidationError)",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  //\"login\": \"{{login}}\", // Логин в заявке обязательный\n  \"subjectInfo\": {\n    \"firstName\": \"Иван\",\n    \"lastName\": \"Иванов\",\n    \"email\": \"examole@example.com\",\n    \"phoneNumber\": \"79991234567\"\n  },\n  \"identityDocuments\": [\n    {\n      \"identityDocumentType\": \"Passport\",\n      \"series\": \"1234\",\n      \"number\": \"123456\",\n      \"issueDate\": \"2020-09-07\"\n    }\n  ],\n  \"identificationType\": \"Personal\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{baseUrl}}/certificate-issues/create"
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- Login: 'Login' должно быть заполнено. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"Login\",\n            \"message\": \"'Login' должно быть заполнено.\",\n            \"details\": null\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Возвращает статус запроса на выпуск сертификата.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if(pm.response.code === 200) {\r",
+									"    var response = JSON.parse(responseBody)\r",
+									"\r",
+									"    if (response.certificateId !== null){\r",
+									"        pm.collectionVariables.set(\"certificateId\", response.certificateId)\r",
+									"    }\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/certificate-issues/:requestId/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"certificate-issues",
+								":requestId",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "requestId",
+									"value": "{{requestId}}",
+									"description": "(Required) Идентификатор запроса на выпуск сертификата."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "http://ca.foxtrot.comp.npo:6025/certificate-issues/:requestId/status",
+									"protocol": "http",
+									"host": [
+										"ca",
+										"foxtrot",
+										"comp",
+										"npo"
+									],
+									"port": "6025",
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"requestId\": \"<integer>\",\n    \"certificateId\": null,\n    \"status\": \"NeedConfirm\",\n    \"error\": null\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate-issues/:requestId/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "99999",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток выпуска сертификата с идентификатором '99999' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Возвращает заявление на выпуск сертификата.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/certificate-issues/:requestId/statement",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"certificate-issues",
+								":requestId",
+								"statement"
+							],
+							"variable": [
+								{
+									"key": "requestId",
+									"value": "{{requestId}}",
+									"description": "(Required) Идентификатор запроса на выпуск сертификата."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "http://ca.foxtrot.comp.npo:6025/certificate-issues/:requestId/statement",
+									"protocol": "http",
+									"host": [
+										"ca",
+										"foxtrot",
+										"comp",
+										"npo"
+									],
+									"port": "6025",
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"statement"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "\"Заявление в формате PDF\""
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate-issues/:requestId/statement",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"statement"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "99999",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток выпуска сертификата с идентификатором '99999' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Создает запрос подтверждения на выпуск сертификата.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/certificate-issues/:requestId/confirmation-request",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"certificate-issues",
+								":requestId",
+								"confirmation-request"
+							],
+							"variable": [
+								{
+									"key": "requestId",
+									"value": "{{requestId}}",
+									"description": "(Required) Идентификатор запроса на выпуск сертификата."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://ca.foxtrot.comp.npo:6025/certificate-issues/:requestId/confirmation-request",
+									"protocol": "http",
+									"host": [
+										"ca",
+										"foxtrot",
+										"comp",
+										"npo"
+									],
+									"port": "6025",
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"confirmation-request"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate-issues/:requestId/confirmation-request",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"confirmation-request"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "99999",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток выпуска сертификата с идентификатором '99999' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Подтверждает выпуск сертификата пользователю.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/certificate-issues/:requestId/confirm?confirmationCode=<string>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"certificate-issues",
+								":requestId",
+								"confirm"
+							],
+							"query": [
+								{
+									"key": "confirmationCode",
+									"value": "<string>",
+									"description": "Код подтверждения."
+								}
+							],
+							"variable": [
+								{
+									"key": "requestId",
+									"value": "{{requestId}}",
+									"description": "(Required) Идентификатор запроса на выпуск сертификата."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://ca.foxtrot.comp.npo:6025/certificate-issues/:requestId/confirm?confirmationCode=57436",
+									"protocol": "http",
+									"host": [
+										"ca",
+										"foxtrot",
+										"comp",
+										"npo"
+									],
+									"port": "6025",
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"confirm"
+									],
+									"query": [
+										{
+											"key": "confirmationCode",
+											"value": "57436",
+											"description": "Код подтверждения."
+										}
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate-issues/:requestId/confirm?confirmationCode=123456",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"confirm"
+									],
+									"query": [
+										{
+											"key": "confirmationCode",
+											"value": "123456",
+											"description": "Код подтверждения."
+										}
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "{{requestId}}",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"WrongConfirmationCode\",\n    \"field\": null,\n    \"message\": \"Введен неверный код подтверждения. Осталось попыток: 4.\",\n    \"details\": null\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate-issues/:requestId/confirm?confirmationCode=123456",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"confirm"
+									],
+									"query": [
+										{
+											"key": "confirmationCode",
+											"value": "123456",
+											"description": "Код подтверждения."
+										}
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "99999",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток выпуска сертификата с идентификатором '99999' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Отменяет процесс выпуска сертификата.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/certificate-issues/:requestId/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"certificate-issues",
+								":requestId",
+								"cancel"
+							],
+							"variable": [
+								{
+									"key": "requestId",
+									"value": "{{requestId}}",
+									"description": "(Required) Идентификатор запроса на выпуск сертификата."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://ca.foxtrot.comp.npo:6025/certificate-issues/:requestId/cancel",
+									"protocol": "http",
+									"host": [
+										"ca",
+										"foxtrot",
+										"comp",
+										"npo"
+									],
+									"port": "6025",
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"cancel"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate-issues/:requestId/cancel",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"cancel"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "{{requestId}}",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"IssueFlowCancellationError\",\n    \"field\": null,\n    \"message\": \"Нельзя отменить процесс выпуска сертификата для потоков в статусе 'Success', 'Error' и 'Cancelled'. Текущий статус 'Success', ИД потока '3'.\",\n    \"details\": null\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate-issues/:requestId/cancel",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate-issues",
+										":requestId",
+										"cancel"
+									],
+									"variable": [
+										{
+											"key": "requestId",
+											"value": "99999",
+											"description": "(Required) Идентификатор запроса на выпуск сертификата."
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток выпуска сертификата с идентификатором '99999' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				}
+			],
+			"description": "Методы для выпуска сертификата.\n\n# Процесс выпуска сертификата\n\n- Создать заявку на выпуск сертификата\n- Получить статус выпуска сертификата - **NeedConfirm**\n- Получить заявление с согласием на выпуск сертификата\n- Создать запрос на подтверждение согласия на выпуск сертификата\n- Подтвердить согласие с заявлением\n- Получить статус выпуска сертификата - **Success**\n    \n\nПосле успешного выпуска сертификата при запросе статуса вернется идентификатор выпущенного сертификата:\n\n``` json\n{\n    \"requestId\": 1,\n    \"certificateId\": 1,\n    \"status\": \"Success\",\n    \"error\": null\n}\n\n ```\n\n# Процесс выпуска сертификата без подтверждения\n\nПодтверждение для выпуска сертификата может быть отключено на стороне провайдера, например в конфигурации.\n\n- Создать заявку на выпуск сертификата\n    \n- Получить статус выпуска сертификата - **Success**\n    \n\n# Особенности\n\n- Подтвердить согласие на выпуск сертификата можно 2 способами, в зависимости от IdentificationType в заявке на выпуск:\n    - Personal - личная идентификация, с помощью ПЭП\n    - ESIA - идентификация с помощью ЕСИА (Госуслуги)\n- Выпуск сертификата можно отменить до тех пор, пока заявка на выпуск не финализирована, то есть пока не находиться в статусе _Success_, _Error_ или _Cancelled_\n    \n\n## Примеры кодов ошибок при неудачном подтверждении\n\n- **WrongConfirmationCode** **\\-** неверный код подтверждения\n- **CertificateIssueConfirmationCodeExpiredError** - истек срок действия кода подтверждения\n- **CertificateIssueConfirmationTryingExceededError** - превышено допустимое количество попыток ввода кода подтверждения\n- **GeneratingConfirmationCodeError** - превышено количество попыток генерации кода подтверждения"
+		},
+		{
+			"name": "Certificate",
+			"item": [
+				{
+					"name": "Возвращает информацию о сертификате.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if(pm.response.code === 200) {\r",
+									"    var response = JSON.parse(responseBody)\r",
+									"    pm.collectionVariables.set(\"thumbprint\", response.thumbprint)\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/certificate/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"certificate",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{certificateId}}",
+									"description": "(Required) Идентификатор сертификата."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "http://ca.foxtrot.comp.npo:6025/certificate/:id",
+									"protocol": "http",
+									"host": [
+										"ca",
+										"foxtrot",
+										"comp",
+										"npo"
+									],
+									"port": "6025",
+									"path": [
+										"certificate",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "",
+											"description": "Идентификатор сертификата."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": 1,\n    \"userLogin\": \"example-123\",\n    \"validFrom\": \"2024-05-28T12:51:58+00:00\",\n    \"validTo\": \"2025-05-28T13:01:58+00:00\",\n    \"serialNumber\": null,\n    \"thumbprint\": \"f927deaf2af2e8efd68655780f4c6062a0d111fe\",\n    \"certificateState\": \"Valid\",\n    \"content\": \"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\"\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/certificate/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"certificate",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "99999",
+											"description": "Идентификатор сертификата."
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Сертификат с идентификатором '99999' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Отзывает сертификат.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"thumbprint\": \"{{thumbprint}}\",\n  \"revocationReason\": \"CRL_REASON_UNSPECIFIED\"\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/certificate/revoke"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  // Отпечаток сертфииката.\n  \"thumbprint\": \"<string>\",\n  // Причина отзыва сертификата [ \"CRL_REASON_UNSPECIFIED\", \"CRL_REASON_KEY_COMPROMISE\", \"CRL_REASON_CA_COMPROMISE\", \"CRL_REASON_AFFILIATION_CHANGED\", \"CRL_REASON_SUPERSEDED\", \"CRL_REASON_CESSATION_OF_OPERATION\", \"CRL_REASON_CERTIFICATE_HOLD\", \"CRL_REASON_REMOVE_FROM_CRL\" ].\n  \"revocationReason\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "http://ca.foxtrot.comp.npo:6025/certificate/revoke"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"thumbprint\": \"123\",\n  \"revocationReason\": \"CRL_REASON_UNSPECIFIED\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{baseUrl}}/certificate/revoke"
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"RevokeError\",\n    \"field\": null,\n    \"message\": \"Сертификат с отпечатком 123 не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				}
+			],
+			"description": "Методы для работы с сертификатами.\n\n# Причина отзыва сертификата\n\nВ данный момент причины отзыва **CRL_REASON_CERTIFICATE_HOLD** и **CRL_REASON_REMOVE_FROM_CRL** не поддерживаются в Directum RX."
+		},
+		{
+			"name": "Sign",
+			"item": [
+				{
+					"name": "Начинает процесс подписания.",
+					"item": [
+						{
+							"name": "Начинает процесс подписания пакета хешей.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if(pm.response.code === 200) {\r",
+											"    var response = JSON.parse(responseBody)\r",
+											"    pm.collectionVariables.set(\"signingId\", response.operationId)\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept-Language",
+										"value": "<string>",
+										"description": "Язык и локаль пользователя."
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"login\": \"{{login}}\",\n  \"documents\": [\n    {\n      \"name\": \"test hash 1\",\n      \"data\": \"Txwjb+qYV3ToeHlvyN63DzRYY+15c1QyU6h5xEe/MWc=\"\n    }\n  ],\n  \"dataType\": \"Hash\",\n  \"certificateThumbprint\": \"{{thumbprint}}\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{baseUrl}}/Sign/start"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Accept-Language",
+												"value": "<string>",
+												"description": "Язык и локаль пользователя."
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "text/plain"
+											},
+											{
+												"key": "Authorization",
+												"value": "<API Key>",
+												"description": "Added as a part of security scheme: apikey"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  // Логин пользователя.\n  \"login\": \"<string>\",\n  // Информация о подписываемых документах.\n  \"documents\": [\n    {\n      // Имя подписываемого документа.\n      \"name\": \"<string>\",\n      // Данные документа.\n      \"data\": \"<string>\"\n    }\n  ],\n  // Тип данных [ \"None\", \"Hash\", \"Binary\", \"StorageBinaryDataId\" ].\n  \"dataType\": \"<string>>\",\n  // Отпечаток сертификата.\n  \"certificateThumbprint\": \"<string>\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": "http://ca.foxtrot.comp.npo:6025/Sign/start"
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n  \"operationId\": \"<string>\",\n  \"status\": \"NeedConfirm\",\n  \"error\": null\n}"
+								},
+								{
+									"name": "Bad Request",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Accept-Language",
+												"value": "<string>",
+												"description": "Язык и локаль пользователя."
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "text/plain"
+											},
+											{
+												"key": "Authorization",
+												"value": "<API Key>",
+												"description": "Added as a part of security scheme: apikey"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"login\": \"{{login}}\",\n  \"documents\": [\n    {\n      \"name\": \"test hash 1\",\n      \"data\": \"12345\"\n    }\n  ],\n  \"dataType\": \"Hash\",\n  \"certificateThumbprint\": \"{{thumbprint}}\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": "{{baseUrl}}/Sign/start"
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- Documents[0].Data: 'Data' должен быть в формате строки base64. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"Documents[0].Data\",\n            \"message\": \"'Data' должен быть в формате строки base64.\",\n            \"details\": null\n        }\n    ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Начинает процесс подписания пакета документов.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if(pm.response.code === 200) {\r",
+											"    var response = JSON.parse(responseBody)\r",
+											"    pm.collectionVariables.set(\"signingId\", response.operationId)\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept-Language",
+										"value": "<string>",
+										"description": "Язык и локаль пользователя."
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"login\": \"{{login}}\",\n  \"documents\": [\n    {\n      \"name\": \"test document 1\",\n      \"data\": \"f8cc3965-55d0-4228-a587-d218805a7c83\"\n    }\n  ],\n  \"dataType\": \"StorageBinaryDataId\",\n  \"certificateThumbprint\": \"{{thumbprint}}\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{baseUrl}}/Sign/start"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Accept-Language",
+												"value": "<string>",
+												"description": "Язык и локаль пользователя."
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "text/plain"
+											},
+											{
+												"key": "Authorization",
+												"value": "<API Key>",
+												"description": "Added as a part of security scheme: apikey"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  // Логин пользователя.\n  \"login\": \"<string>\",\n  // Информация о подписываемых документах.\n  \"documents\": [\n    {\n      // Имя подписываемого документа.\n      \"name\": \"<string>\",\n      // Данные документа.\n      \"data\": \"<string>\"\n    }\n  ],\n  // Тип данных [ \"None\", \"Hash\", \"Binary\", \"StorageBinaryDataId\" ].\n  \"dataType\": \"<string>>\",\n  // Отпечаток сертификата.\n  \"certificateThumbprint\": \"<string>\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": "http://ca.foxtrot.comp.npo:6025/Sign/start"
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n  \"operationId\": \"<string>\",\n  \"status\": \"NeedConfirm\",\n  \"error\": null\n}"
+								},
+								{
+									"name": "Bad Request",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Accept-Language",
+												"value": "<string>",
+												"description": "Язык и локаль пользователя."
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "text/plain"
+											},
+											{
+												"key": "Authorization",
+												"value": "<API Key>",
+												"description": "Added as a part of security scheme: apikey"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"login\": \"{{login}}\",\n  \"documents\": [\n    {\n      \"name\": \"test hash 1\",\n      \"data\": \"12345\"\n    }\n  ],\n  \"dataType\": \"Hash\",\n  \"certificateThumbprint\": \"{{thumbprint}}\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": "{{baseUrl}}/Sign/start"
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- Documents[0].Data: 'Data' должен быть в формате строки base64. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"Documents[0].Data\",\n            \"message\": \"'Data' должен быть в формате строки base64.\",\n            \"details\": null\n        }\n    ]\n}"
+								}
+							]
+						},
+						{
+							"name": "Начинает процесс подписания пакета бинарных данных.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if(pm.response.code === 200) {\r",
+											"    var response = JSON.parse(responseBody)\r",
+											"    pm.collectionVariables.set(\"signingId\", response.operationId)\r",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept-Language",
+										"value": "<string>",
+										"description": "Язык и локаль пользователя."
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"login\": \"{{login}}\",\n  \"documents\": [\n    {\n      \"name\": \"test binary 1\",\n      \"data\": \"VG8gYmUgb3Igbm90IHRvIGJlLCBUaGF0IGlzIHRoZSBxdWVzdGlvbg==\"\n    }\n  ],\n  \"dataType\": \"Binary\",\n  \"certificateThumbprint\": \"{{thumbprint}}\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{baseUrl}}/Sign/start"
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Accept-Language",
+												"value": "<string>",
+												"description": "Язык и локаль пользователя."
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "text/plain"
+											},
+											{
+												"key": "Authorization",
+												"value": "<API Key>",
+												"description": "Added as a part of security scheme: apikey"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  // Логин пользователя.\n  \"login\": \"<string>\",\n  // Информация о подписываемых документах.\n  \"documents\": [\n    {\n      // Имя подписываемого документа.\n      \"name\": \"<string>\",\n      // Данные документа.\n      \"data\": \"<string>\"\n    }\n  ],\n  // Тип данных [ \"None\", \"Hash\", \"Binary\", \"StorageBinaryDataId\" ].\n  \"dataType\": \"<string>>\",\n  // Отпечаток сертификата.\n  \"certificateThumbprint\": \"<string>\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": "http://ca.foxtrot.comp.npo:6025/Sign/start"
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n  \"operationId\": \"<string>\",\n  \"status\": \"NeedConfirm\",\n  \"error\": null\n}"
+								},
+								{
+									"name": "Bad Request",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Accept-Language",
+												"value": "<string>",
+												"description": "Язык и локаль пользователя."
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "text/plain"
+											},
+											{
+												"key": "Authorization",
+												"value": "<API Key>",
+												"description": "Added as a part of security scheme: apikey"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"login\": \"{{login}}\",\n  \"documents\": [\n    {\n      \"name\": \"test hash 1\",\n      \"data\": \"12345\"\n    }\n  ],\n  \"dataType\": \"Hash\",\n  \"certificateThumbprint\": \"{{thumbprint}}\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": "{{baseUrl}}/Sign/start"
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- Documents[0].Data: 'Data' должен быть в формате строки base64. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"Documents[0].Data\",\n            \"message\": \"'Data' должен быть в формате строки base64.\",\n            \"details\": null\n        }\n    ]\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Возвращает статус процесса подписания.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/Sign/:transactionId/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"Sign",
+								":transactionId",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "transactionId",
+									"value": "{{signingId}}",
+									"description": "(Required) Идентификатор транзакции подписания."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "//Sign/:transactionId/status",
+									"path": [
+										"",
+										"Sign",
+										":transactionId",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"description": "(Required) Идентификатор транзакции подписания."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"operationId\": \"<string>\",\n    \"status\": \"NeedConfirm\",\n    \"error\": null\n}"
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"description": "(Required) Идентификатор транзакции подписания.",
+											"value": "123"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- transactionId: Идентификатор транзакции должен быть в формате Guid. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"transactionId\",\n            \"message\": \"Идентификатор транзакции должен быть в формате Guid.\",\n            \"details\": null\n        }\n    ]\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"description": "(Required) Идентификатор транзакции подписания.",
+											"value": "{{$guid}}"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток подписания с идентификатором '7b34d8b3-8f69-4aa2-aa3b-22182cd64a36' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Создает запрос на подтверждение подписания.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/Sign/:transactionId/confirmation-request",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"Sign",
+								":transactionId",
+								"confirmation-request"
+							],
+							"variable": [
+								{
+									"key": "transactionId",
+									"value": "{{signingId}}",
+									"description": "(Required) Идентификатор транзакции подписания."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "//Sign/:transactionId/confirmation-request",
+									"path": [
+										"",
+										"Sign",
+										":transactionId",
+										"confirmation-request"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"description": "(Required) Идентификатор транзакции подписания."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"confirmationType\": \"Sms\",\n    \"confirmationData\": [\n        {\n            \"type\": \"PlainText\",\n            \"data\": \"На номер 7990XXXX567 отправлено SMS-сообщение с кодом подтверждения. Введите полученный код.\"\n        }\n    ]\n}"
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/confirmation-request",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"confirmation-request"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"value": "123",
+											"description": "(Required) Идентификатор транзакции подписания."
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- transactionId: Идентификатор транзакции должен быть в формате Guid. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"transactionId\",\n            \"message\": \"Идентификатор транзакции должен быть в формате Guid.\",\n            \"details\": null\n        }\n    ]\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/confirmation-request",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"confirmation-request"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"value": "{{$guid}}",
+											"description": "(Required) Идентификатор транзакции подписания."
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток подписания с идентификатором '95f5b315-055d-40ca-95ab-e5a707288152' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Подтверждает подписание документа.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/Sign/:transactionId/confirm?confirmationCode=56064",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"Sign",
+								":transactionId",
+								"confirm"
+							],
+							"query": [
+								{
+									"key": "confirmationCode",
+									"value": "56064",
+									"description": "Код подтверждения."
+								}
+							],
+							"variable": [
+								{
+									"key": "transactionId",
+									"value": "{{signingId}}",
+									"description": "(Required) Идентификатор транзакции подписания."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "/Sign/:transactionId/confirm?confirmationCode=",
+									"path": [
+										"",
+										"Sign",
+										":transactionId",
+										"confirm"
+									],
+									"query": [
+										{
+											"key": "confirmationCode",
+											"value": "",
+											"description": "Код подтверждения."
+										}
+									],
+									"variable": [
+										{
+											"key": "transactionId"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/confirm?confirmationCode=123",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"confirm"
+									],
+									"query": [
+										{
+											"key": "confirmationCode",
+											"value": "123",
+											"description": "Код подтверждения."
+										}
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"value": "{{signingId}}"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"SigningConfirmationWrongCodeError\",\n    \"field\": null,\n    \"message\": \"Введен неверный код подтверждения. Осталось попыток: 4.\",\n    \"details\": null\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/confirm?confirmationCode=",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"confirm"
+									],
+									"query": [
+										{
+											"key": "confirmationCode",
+											"value": "",
+											"description": "Код подтверждения."
+										}
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"value": "{{$guid}}"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток подписания с идентификатором '122181b8-5d41-4cfd-ac0c-ce90c42b9c76' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Возвращает готовые подписи.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/Sign/:transactionId/signs",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"Sign",
+								":transactionId",
+								"signs"
+							],
+							"variable": [
+								{
+									"key": "transactionId",
+									"value": "{{signingId}}",
+									"description": "(Required) Идентификатор транзакции подписания."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "//Sign/:transactionId/signs",
+									"path": [
+										"",
+										"Sign",
+										":transactionId",
+										"signs"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"description": "(Required) Идентификатор транзакции подписания."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "[\n    {\n        \"documentName\": \"test hash 1\",\n        \"signature\": \"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\"\n    }\n]"
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/signs",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"signs"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"description": "(Required) Идентификатор транзакции подписания.",
+											"value": "{{signingId}}"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"SigningError\",\n    \"field\": null,\n    \"message\": \"Невозможно выполнить операцию получения подписей, поток имеет статус: 'NeedConfirm', а должен быть статус 'Success'.\",\n    \"details\": null\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/Sign/:transactionId/signs",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"Sign",
+										":transactionId",
+										"signs"
+									],
+									"variable": [
+										{
+											"key": "transactionId",
+											"description": "(Required) Идентификатор транзакции подписания.",
+											"value": "{{$guid}}"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"NotFoundError\",\n    \"field\": null,\n    \"message\": \"Поток подписания с идентификатором '7a1a61e2-1573-4797-bc52-7cb730877f7a' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				}
+			],
+			"description": "Методы для работы с подписанием.\n\n# Процесс подписания документов\n\n- Стартовать процесс подписания документов, с необходимым типом данных\n- Получить статус - **NeedConfirm**\n- Создать запрос подтверждения подписания\n    \n- Подтвердить операцию\n- Получить статус - **Success**\n- Получить готовые подписи\n    \n\nПри успешном подтверждении операции подписания при получении статуса вернется следующий ответ:\n\n``` json\n{\n    \"operationId\": \"d9b8f096-bd6e-42be-8d2e-416cdd945f24\",\n    \"status\": \"Success\",\n    \"error\": null\n}\n\n ```\n\n# Процесс подписания документов без подтверждения\n\n- Стартовать процесс подписания документов, с необходимым типом данных\n- Получить статус - **Success**\n- Получить готовые подписи\n    \n\n# Типы данных для подписания\n\nПроцесс подписания можно начать с разным типом данных (**DataType**) передаваемых документов:\n\n- Hash - хеш в Base64\n- StorageBinaryDataId - идентификатор документа в сервисе хранилищ\n- Binary - контент документа в Base64\n    \n\n# Подтверждение операции подписания\n\nПри создании подтверждения операции подписания будет возвращена следующая информация:\n\n- ConfirmationType - способ подтверждения операции, один из \\[ \"Sms\", \"Email\", \"Viber\", \"MobileApp\", \"None\", \"Default\" \\]\n- ConfirmationData\\[\\] - массив данных, для подвтерждения операции:\n    - ConfirmationDataType - тип данных для подтверждения один из \\[ \"None\", \"PlainText\", \"QrCode\", \"Link\" \\]\n    - Data - содержимое данных для подтверждения\n\n## Пример ответа при подтверждении операции с помощью Sms\n\n``` json\n{\n    \"confirmationType\": \"Sms\",\n    \"confirmationData\": [\n        {\n            \"type\": \"PlainText\",\n            \"data\": \"На номер 7990XXXX567 отправлено SMS-сообщение с кодом подтверждения. Введите полученный код.\"\n        }\n    ]\n}\n\n ```\n\n## Пример ответа при подтверждении операции с помощью QrCode\n\n``` json\n{\n    \"confirmationType\": \"MobileApp\",\n    \"confirmationData\": [\n        {\n            \"type\": \"QrCode\",\n            \"data\": \"data:image/png;base64,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\"\n        }\n    ]\n}\n\n ```\n\n## Примеры кодов ошибок при неудачном подтверждении операции подписания\n\n- **SigningConfirmationCodeExpired** - время жизни кода подвтерждения истекло\n- **UnconfirmedSigningStatusError** - статус операции подписания не подтвержден\n- **SigningConfirmationWrongCode** - некорректный код подтверждения"
+		},
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Проверка жизнеспособности сервиса.",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/health"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": "http://ca.foxtrot.comp.npo:6025/health"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"name": "Content-Type",
+									"description": "",
+									"type": "text"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"Entries\": {\n        \"Database check\": {\n            \"Data\": {},\n            \"Description\": null,\n            \"Duration\": \"00:00:00.1301204\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"SYSTEM\"\n            ]\n        },\n        \"Database scheme check\": {\n            \"Data\": {},\n            \"Description\": \"Схема базы данных корректна.\",\n            \"Duration\": \"00:00:00.1735633\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"SYSTEM\"\n            ]\n        }\n    },\n    \"Status\": \"Healthy\",\n    \"TotalDuration\": \"00:00:00.1744010\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Проверка готовности сервиса.",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/ready"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": "http://ca.foxtrot.comp.npo:6025/ready"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"name": "Content-Type",
+									"description": "",
+									"type": "text"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"Entries\": {\n        \"Database check\": {\n            \"Data\": {},\n            \"Description\": null,\n            \"Duration\": \"00:00:00.1562883\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"SYSTEM\"\n            ]\n        },\n        \"Database scheme check\": {\n            \"Data\": {},\n            \"Description\": \"Схема базы данных корректна.\",\n            \"Duration\": \"00:00:00.0064610\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"SYSTEM\"\n            ]\n        },\n        \"identity_service_health_check\": {\n            \"Data\": {},\n            \"Description\": null,\n            \"Duration\": \"00:00:00.2314878\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"ready\",\n                \"identity_service\"\n            ]\n        },\n        \"identity_service_trust_check\": {\n            \"Data\": {},\n            \"Description\": null,\n            \"Duration\": \"00:00:00.1470371\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"ready\",\n                \"identity_service\",\n                \"trust\"\n            ]\n        },\n        \"message_broker_health_check\": {\n            \"Data\": {},\n            \"Description\": null,\n            \"Duration\": \"00:00:00.1969131\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"ready\",\n                \"message_broker\"\n            ]\n        },\n        \"message_broker_trust_check\": {\n            \"Data\": {},\n            \"Description\": null,\n            \"Duration\": \"00:00:00.4018325\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"ready\",\n                \"message_broker\"\n            ]\n        },\n        \"document_service_health_check\": {\n            \"Data\": {},\n            \"Description\": null,\n            \"Duration\": \"00:00:00.0508250\",\n            \"Exception\": null,\n            \"Status\": \"Healthy\",\n            \"Tags\": [\n                \"ready\",\n                \"document_service\"\n            ]\n        }\n    },\n    \"Status\": \"Healthy\",\n    \"TotalDuration\": \"00:00:00.4133848\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Проверка доверия сервиса.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/checktrust"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain",
+										"type": "text"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey",
+										"type": "text"
+									}
+								],
+								"url": "http://ca.foxtrot.comp.npo:6025/checktrust"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "Text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			],
+			"description": "Методы для проверки здоровья, доверия и готовности сервиса.\n\nНеобходимы в первую очередь для проверки здоровья и доступности провайдера (**/health**, **/checktrust**) в сервисе подписания, а также для удобной настройки сервиса (**/ready**).",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "Signing Confirmation Options",
+			"item": [
+				{
+					"name": "Возвращает опции подтверждения подписания для тенанта.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/signing-confirmation-options"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": "http://ca.foxtrot.comp.npo:6025/signing-confirmation-options"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"methods\": [\n        \"None\",\n        \"ConfirmationCode\"\n    ],\n    \"channels\": [\n        \"Sms\",\n        \"Email\",\n        \"Viber\",\n        \"Default\"\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Устанавливает опцию подтверждения подписания для тенанта.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"method\": \"ConfirmationCode\",\n  \"channel\": \"Default\"\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/signing-confirmation-options"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"method\": \"ConfirmationCode\",\n  \"channel\": \"Sms\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "http://ca.foxtrot.comp.npo:6025/signing-confirmation-options"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"method\": \"MobileApp\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": "{{baseUrl}}/signing-confirmation-options"
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- Method: 'Method' должен иметь значение 'ConfirmationCode' или 'None'. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"Method\",\n            \"message\": \"'Method' должен иметь значение 'ConfirmationCode' или 'None'.\",\n            \"details\": null\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Устанавливает опцию подтверждения подписания для пользователя.",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"method\": \"ConfirmationCode\",\n  \"channel\": \"Default\"\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/signing-confirmation-options/:login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"signing-confirmation-options",
+								":login"
+							],
+							"variable": [
+								{
+									"key": "login",
+									"value": "{{login}}",
+									"description": "(Required) Логин пользователя."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"method\": \"ConfirmationCode\",\n  \"channel\": \"Default\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://ca.foxtrot.comp.npo:6025/signing-confirmation-options/:login",
+									"protocol": "http",
+									"host": [
+										"ca",
+										"foxtrot",
+										"comp",
+										"npo"
+									],
+									"port": "6025",
+									"path": [
+										"signing-confirmation-options",
+										":login"
+									],
+									"variable": [
+										{
+											"key": "login",
+											"description": "(Required) Логин пользователя."
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"method\": \"MobileApp\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/signing-confirmation-options/:login",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"signing-confirmation-options",
+										":login"
+									],
+									"variable": [
+										{
+											"key": "login",
+											"description": "(Required) Логин пользователя."
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"ValidationError\",\n    \"field\": null,\n    \"message\": \"Validation failed: \\n -- Method: 'Method' должен иметь значение 'ConfirmationCode' или 'None'. Severity: Error\",\n    \"details\": [\n        {\n            \"code\": null,\n            \"field\": \"Method\",\n            \"message\": \"'Method' должен иметь значение 'ConfirmationCode' или 'None'.\",\n            \"details\": null\n        }\n    ]\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"method\": \"None\",\n  \"channel\": \"Email\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/signing-confirmation-options/:login",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"signing-confirmation-options",
+										":login"
+									],
+									"variable": [
+										{
+											"key": "login",
+											"description": "(Required) Логин пользователя.",
+											"value": "123"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": \"UserNotFoundError\",\n    \"field\": null,\n    \"message\": \"Пользователь с логином '123' не найден.\",\n    \"details\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Возвращает опцию подтверждения подписания установленную по умолчанию для тенанта.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/signing-confirmation-options/default"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": "http://ca.foxtrot.comp.npo:6025/signing-confirmation-options/default"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"method\": \"ConfirmationCode\",\n    \"channel\": \"Default\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Возвращает опцию подтверждения подписания установленную по умолчанию для пользователя.",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/signing-confirmation-options/:login/default",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"signing-confirmation-options",
+								":login",
+								"default"
+							],
+							"variable": [
+								{
+									"key": "login",
+									"value": "{{login}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"url": "http://ca.foxtrot.comp.npo:6025/signing-confirmation-options/default"
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"method\": \"ConfirmationCode\",\n    \"channel\": \"Default\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Методы для работы с опциями подтверждения подписания.\n\n# Особенности работы с опциями подтверждения подписания\n\nОпции подтверждения это совокупность способов подтверждения операции подписания и каналов доставки кода подтверждения.\n\nПоддерживается три способа подтверждения:\n\n- ConfirmationCode - код подтверждения\n- MobileApp - мобильное приложение\n- None - подтверждение отключено\n    \n\nКаналы доставки становятся доступными для работы в случае, если для подтверждения выбран способ **ConfirmationCode,** иначе каналы не доступны, так как с точки зрения платформы подписания доставлять нечего.\n\nПоддерживаемые каналы доставки кода подтверждения:\n\n- Default - по умолчанию (предполагается что в таком случае будет выбрана настройка из БД или конфигурации - преднастройка)\n- Sms\n- Email\n- Viber\n    \n\n**Важно!**\n\n- Если провайдер поддерживает только **MobileApp**, то реализовать методы для установки опций подтверждения все равно **необходимо**, в виде метода возвращающего всегда _200 OK_\n- Если провайдер поддерживает способ **ConfirmationCode**, то необходимо также реализовать отключение подтверждения операции подписания - **None**\n    \n\n## Пример работы для провайдера с единственным способом подтверждения - **MobileApp**\n\nМетоды:\n\n- GET /signing-confirmation-options\n- GET /signing-confirmation-options/default\n- GET /signing-confirmation-options/:login/default\n    \n\nВернут:\n\n``` json\n{\n  \"Methods\": [\n    \"MobileApp\"\n  ]\n}\n\n ```\n\nМетоды:\n\n- POST /signing-confirmation-options\n- POST /signing-confirmation-options/:login\n    \n\nВернут: 200 OK (вне зависимости от переданных данных)"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": {
+			"token": "{{token}}"
+		}
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://ca.foxtrot.comp.npo:6025",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "idsUrl",
+			"value": "http://ca.foxtrot.comp.npo:6006",
+			"type": "string"
+		},
+		{
+			"key": "requestId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "certificateId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "thumbprint",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "signingId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "login",
+			"value": "example-login",
+			"type": "string"
+		}
+	]
+}
