@@ -5,6 +5,8 @@ VisualStudioVersion = 17.9.34902.65
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Directum.TemplateProviderCA.App", "Directum.TemplateProviderCA.App\Directum.TemplateProviderCA.App.csproj", "{B01DC8DD-69F0-41AA-B02C-C93C1AE40D4D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Directum.TemplateProviderCA.FunctionalTests", "Directum.TemplateProviderCA.FunctionalTests\Directum.TemplateProviderCA.FunctionalTests.csproj", "{35E8C61A-220E-4F2E-B2CF-63F78CC5FF04}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{B01DC8DD-69F0-41AA-B02C-C93C1AE40D4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B01DC8DD-69F0-41AA-B02C-C93C1AE40D4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B01DC8DD-69F0-41AA-B02C-C93C1AE40D4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35E8C61A-220E-4F2E-B2CF-63F78CC5FF04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35E8C61A-220E-4F2E-B2CF-63F78CC5FF04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35E8C61A-220E-4F2E-B2CF-63F78CC5FF04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35E8C61A-220E-4F2E-B2CF-63F78CC5FF04}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
