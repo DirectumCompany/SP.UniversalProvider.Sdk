@@ -1,3 +1,4 @@
+using System.Net;
 using Directum.Core.UniversalProvider.WebApiModels.Sign;
 using FluentAssertions;
 
@@ -57,5 +58,31 @@ public class SigningTests : FunctionalTestBase
     signs[1]
       .Should()
       .BeEquivalentTo(new SigningResult { DocumentName = signingRequest.Documents[1].Name, });
+  }
+
+  [Test]
+  public async Task Signing_Validation_Error()
+  {
+    var signingRequest = new SigningRequest
+    {
+      CertificateThumbprint = "AnyThumb",
+      Login = null,
+      DataType = DataType.Hash,
+      Documents = new[]
+      {
+        new DocumentInfo
+        {
+          Data = "Hash1",
+          Name = "DocumentName1",
+        },
+      },
+    };
+
+    await AssertApiException(() => _signClient.Start(signingRequest), HttpStatusCode.BadRequest, "ValidationError");
+  }
+
+  public async Task Signing_OperationIdNotFound_Error()
+  {
+    await AssertApiException(() => _signClient.CreateConfirmationRequest("OperationIdNotExitst"), HttpStatusCode.NotFound, "");
   }
 }

@@ -1,10 +1,15 @@
+using System.Net;
 using Directum.Core.UniversalProvider.WebApiClient.Certificates;
 using Directum.Core.UniversalProvider.WebApiClient.Sign;
+using Directum.Core.UniversalProvider.WebApiModels;
+using FluentAssertions.Execution;
+using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using Refit;
 
 namespace Directum.Core.UniversalProvider.FunctionalTests;
@@ -62,4 +67,25 @@ public class FunctionalTestBase
   }
 
   #endregion
+
+  public async Task AssertApiException(Func<Task> action, HttpStatusCode expectedHttpStatus, string expectedErrorCode)
+  {
+    try
+    {
+      await action();
+    }
+    catch (ApiException ex)
+    {
+      var errorResponse = JsonConvert.DeserializeObject<Error>(ex.Content);
+
+      using (new AssertionScope())
+      {
+        ex.StatusCode.Should()
+          .Be(expectedHttpStatus);
+
+        errorResponse.Code.Should()
+          .BeEquivalentTo(expectedErrorCode);
+      }
+    }
+  }
 }

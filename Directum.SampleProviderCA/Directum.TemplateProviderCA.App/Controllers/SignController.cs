@@ -1,5 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using Directum.Core.UniversalProvider.WebApiModels;
 using Directum.Core.UniversalProvider.WebApiModels.Sign;
+using Directum.TemplateProviderCA.App.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,6 +28,19 @@ public class SignController : ControllerBase
   {
     var signingStatusInfo = request.Login switch
     {
+      null => throw new DomainException(
+        "Ошибка валидации.", 
+        "ValidationError", 
+        HttpStatusCode.BadRequest, 
+        new List<Error> 
+        {
+          new()
+          {
+            Field = "Login",
+            Message = "'Login' должно быть заполнено.",
+          },
+        }),
+
       _ => new SigningStatusInfo()
       {
         Status = SigningStatus.InProgress,
