@@ -1,20 +1,78 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# Шаблон провайдера `Directum.TemplateProviderCA.App`
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+Шаблон провайдера предоставляет базовые инфраструктурные настройки:
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+1. JWT авторизация;
+1. Настройка Swagger документации;
+1. Методы проверки состояния сервиса.
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+Также в шаблоне есть реализация ожидаемых API процессов в виде контроллеров:
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+1. CertificateIssuesController - выпуск сертификата;
+1. CertificateController - управление сертификатами;
+1. SignController - подписание документов;
+1. SigningConfirmationOptionsController - управление способами подтверждения подписания.
+
+В шаблоне используется Nuget-пакет содержащий модели API, версия пакета соответствует версии сервиса подписания.
+
+Обязательной реализации требует только процесс подписания документов, т.е. методы контроллера SignController. 
+
+Для процессов выпуска сертификата, управления сертификатами, управления способами подтверждения подписания - реализация не требуется, 
+и нужна лишь на тот случай, если провайдер предоставляет возможность управления облачными сертификатами и способами подтверждения подписания извне.
+Методы API должны возвращать 405 HTTP-статус (method not allowed), если процессы, соответствующие этим методам, не поддерживаются данным провайдером.
+
+## Авторизация
+
+Используется авторизация по JWT-токенам, в шаблоне уже реализована настройка JWT авторизации.
+JWT авторизация обязательна для интеграции с сервисом подписания. 
+Сервис подписания будет выпускать JWT токены для авторизации в реализуемом провайдере, секция конфигурации `Authentication` настраивает проверку JWT токенов: 
+1. Аудиенция (Audience) назначается реализуемому провайдеру самостоятельно самим провайдером, далее эту аудиенцию нужно будет передать платформе подписания;
+1. Далее возможно настроить несколько схем авторизации, т.е. может потребоваться чтобы сервис одновременно мог авторизовать по разным издателям токенов;
+1. Издатель токенов (Issuer) будет иметь значение "HrProId", поэтому эта настройка занесена по умолчанию в appsettings.json;
+1. JWT токен может проверяться одним из двух способов:
+	1. EncryptionKey - симметричным ключем шифрования, используется для разработки и отладки;
+	1. SigningCertificatePath или SigningCertificateThumbprint - сертификатом, который может быть указан как путь к файлу сертификата,
+или как отпечаток сертификата установленный на машине где разворачивается сервис.
+
+## Настройка Swagger документации
+
+Не обязательна при реализации провайдера, но в шаблоне предоставляет документацию OpenAPI и дает возможность вызывать сервис используя JWT токены.
+
+## Методы проверки состояния сервиса
+
+/version - необязательно, возвращает версию сервиса, уже реализовано в шаблоне;
+/health - обязательно, возвращает состояние сервиса, в шаблоне реализована лишь базовая проверка, можно реализовать дополнительные проверки;
+/checktrust - обязательно, нужен для проверки доверия к сервису, в шаблоне уже реализовано.
+
+# Функциональные тесты `Directum.TemplateProviderCA.FunctionalTests`
+
+Функциональные тесты (далее ФТ) демонстрируют основные кейсы использования провайдера, а также ожидаемый формат ошибок в негативных кейсах. 
+Большинство тестов не пригодны для тестирования реального сервиса, а лишь демонстрируют ожидаемое поведение.
+
+В ФТ используются Refit клиенты из Nuget пакета.
+Эти же Refit клиенты сам сервис подписания будет использовать при вызове провайдера, таким образом ФТ проверяют интеграцию сервиса подписания и реализуемый провайдер.
+
+ФТ можно запускать:
+1. Через тестовый хост проекта `Directum.TemplateProviderCA.App`, отладка проекта также поддерживается;
+1. Раскомментировать `RealHost()` в методе `SetUp` ФТ, тогда тесты будут проверять реальный хост.
+
+В ФТ захардкожен JWT токен `ServiceToken` на 10 лет, подписанный `ZNBSyxgFERlvXt6JbO5ujWkMAPy1d00M`, следующего содержания:
+
+`
+{
+  "nbf": 1717423797,
+  "exp": 2017424697,
+  "iss": "HrProId",
+  "aud": "SampleProviderCA"
+}
+`
+
+Что соответствует настройкам шаблона:
+`Authentication.TrustedIssuers[0].Issuer: "HrProId"` (appsettings.json)
+`Authentication.TrustedIssuers[0].EncryptionKey: "ZNBSyxgFERlvXt6JbO5ujWkMAPy1d00M"` (appsettings.Development.json)
+`Authentication.Audience: "SampleProviderCA"` (appsettings.Development.json)
+
+Если данные настройки будут изменены, то нужно будет подставить другой токен, или добавить в ФТ выпуск нужного токена динамически.
+
+На данный момент есть ФТ только для процесса подписания, с учетом процесса подписание через внешнее приложение и через QR код, 
+без процесса выпуска и управления сертификата.
