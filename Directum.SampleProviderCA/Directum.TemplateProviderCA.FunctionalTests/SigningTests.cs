@@ -45,19 +45,19 @@ public class SigningTests : FunctionalTestBase
 
     confirmationInfo.ConfirmationData
       .Should()
-      .ContainEquivalentOf(new ConfirmationData { Type = ConfirmationDataType.QrCode });
+      .Match<ConfirmationData[]>(res => res.Any(v => v.Type == ConfirmationDataType.QrCode));
 
     confirmationInfo.ConfirmationData
       .Should()
-      .ContainEquivalentOf(new ConfirmationData { Type = ConfirmationDataType.Link });
+      .Match<ConfirmationData[]>(res => res.Any(v => v.Type == ConfirmationDataType.Link));
 
     signs[0]
       .Should()
-      .BeEquivalentTo(new SigningResult { DocumentName = signingRequest.Documents[0].Name, });
+      .Match<SigningResult>(res => res.DocumentName == signingRequest.Documents[0].Name);
 
     signs[1]
       .Should()
-      .BeEquivalentTo(new SigningResult { DocumentName = signingRequest.Documents[1].Name, });
+      .Match<SigningResult>(res => res.DocumentName == signingRequest.Documents[1].Name);
   }
 
   [Test]
@@ -81,8 +81,9 @@ public class SigningTests : FunctionalTestBase
     await AssertApiException(() => _signClient.Start(signingRequest), HttpStatusCode.BadRequest, "ValidationError");
   }
 
+  [Test]
   public async Task Signing_OperationIdNotFound_Error()
   {
-    await AssertApiException(() => _signClient.CreateConfirmationRequest("OperationIdNotExitst"), HttpStatusCode.NotFound, "");
+    await AssertApiException(() => _signClient.GetStatus("OperationIdNotExitst"), HttpStatusCode.NotFound, "NotFoundError");
   }
 }

@@ -62,6 +62,8 @@ public class SignController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<SigningStatusInfo>> GetStatus([FromRoute] string operationId)
   {
+    ThrowExceptionIfNeed(operationId);
+
     var signingStatusInfo = operationId switch
     {
       _ => new SigningStatusInfo
@@ -85,6 +87,8 @@ public class SignController : ControllerBase
   public async Task<ActionResult<ConfirmationInfo>> CreateConfirmationRequest(
     [FromRoute] string operationId)
   {
+    ThrowExceptionIfNeed(operationId);
+
     var confirmationInfo = operationId switch
     {
       _ => new ConfirmationInfo
@@ -121,6 +125,8 @@ public class SignController : ControllerBase
     [FromRoute] string operationId,
     [FromQuery][MaybeNull] string confirmationCode)
   {
+    ThrowExceptionIfNeed(operationId);
+
     return Ok();
   }
 
@@ -135,6 +141,8 @@ public class SignController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<SigningResult[]>> GetSigns([FromRoute] string operationId)
   {
+    ThrowExceptionIfNeed(operationId);
+
     var signs = new SigningResult[]
     {
       new SigningResult
@@ -149,5 +157,14 @@ public class SignController : ControllerBase
       },
     };
     return Ok(signs);
+  }
+
+  private void ThrowExceptionIfNeed(string operationId)
+  {
+    object _ = operationId switch
+    {
+      "OperationIdNotExitst" => throw new DomainException("Поток подписания не найден.", "NotFoundError", HttpStatusCode.NotFound),
+      _ => new object(),
+    };
   }
 }
