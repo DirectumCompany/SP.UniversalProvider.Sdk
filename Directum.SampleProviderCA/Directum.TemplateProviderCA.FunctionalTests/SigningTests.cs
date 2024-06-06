@@ -31,11 +31,31 @@ public class SigningTests : FunctionalTestBase
 
     var signingStatus = await _signClient.Start(signingRequest);
 
+    signingStatus.Status
+      .Should()
+      .BeOneOf(SigningStatus.InProgress, SigningStatus.NeedConfirm);
+
     signingStatus = await _signClient.GetStatus(signingStatus.OperationId);
+
+    signingStatus.Status
+      .Should()
+      .Be(SigningStatus.NeedConfirm);
 
     var confirmationInfo = await _signClient.CreateConfirmationRequest(signingStatus.OperationId);
 
+    signingStatus = await _signClient.GetStatus(signingStatus.OperationId);
+
+    signingStatus.Status
+      .Should()
+      .Be(SigningStatus.NeedConfirm);
+
     await _signClient.Confirm(signingStatus.OperationId, "12");
+
+    signingStatus = await _signClient.GetStatus(signingStatus.OperationId);
+
+    signingStatus.Status
+      .Should()
+      .Be(SigningStatus.Success);
 
     var signs = await _signClient.GetSigns(signingStatus.OperationId);
 
@@ -85,5 +105,11 @@ public class SigningTests : FunctionalTestBase
   public async Task Signing_OperationIdNotFound_Error()
   {
     await AssertApiException(() => _signClient.GetStatus("OperationIdNotExitst"), HttpStatusCode.NotFound, "NotFoundError");
+  }
+
+  [Test]
+  public async Task Signing_UnexpectedServerError_Error()
+  {
+    await AssertApiException(() => _signClient.GetSigns("UnexpectedServerError"), HttpStatusCode.InternalServerError, "InternalServerError");
   }
 }

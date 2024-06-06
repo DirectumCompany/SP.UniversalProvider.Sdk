@@ -159,11 +159,16 @@ public class SignController : ControllerBase
     return Ok(signs);
   }
 
+  /// <summary>
+  /// Генерирует ошибку по ключевой строке.
+  /// </summary>
+  /// <param name="operationId">Переданный идентификатор подписания.</param>
   private void ThrowExceptionIfNeed(string operationId)
   {
     object _ = operationId switch
     {
       "OperationIdNotExitst" => throw new DomainException("Поток подписания не найден.", "NotFoundError", HttpStatusCode.NotFound),
+      "UnexpectedServerError" => throw new Exception("Произошла неожиданная ошибка сервера, которая не была обработана"),
       _ => new object(),
     };
   }
