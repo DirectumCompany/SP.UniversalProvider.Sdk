@@ -51,7 +51,7 @@ public class SigningTests : FunctionalTestBase
 
     await _signClient.Confirm(signingStatus.OperationId, "1");
 
-    signingStatus = await _signClient.GetStatus(signingStatus.OperationId);
+    signingStatus = await _signClient.GetStatus("SuccessStatus");
 
     signingStatus.Status
       .Should()

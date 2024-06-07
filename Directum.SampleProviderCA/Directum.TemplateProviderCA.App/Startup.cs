@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
-using Directum.TemplateProviderCA.App.Exceptions;
 
 /// <summary>
 /// Класс, определяющий процедуру запуска приложения.
@@ -60,8 +59,6 @@ public class Startup
       app.UseSwagger();
       app.UseSwaggerUI();
     }
-
-    app.UseMiddleware<ExceptionHandlerMiddleware>();
 
     app.UseRouting();
 
