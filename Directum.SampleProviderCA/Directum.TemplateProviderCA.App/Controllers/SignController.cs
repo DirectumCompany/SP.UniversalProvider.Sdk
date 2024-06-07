@@ -127,7 +127,11 @@ public class SignController : ControllerBase
   {
     ThrowExceptionIfNeed(operationId);
 
-    return Ok();
+    return operationId switch
+    {
+      "UserNotSignDocumentInExternalApp" => throw new DomainException("Документы еще не подписаны. Попробуйте позже.", "UnconfirmedSigningStatusError", HttpStatusCode.BadRequest),
+      _ => Ok()
+    };
   }
 
   /// <summary>
