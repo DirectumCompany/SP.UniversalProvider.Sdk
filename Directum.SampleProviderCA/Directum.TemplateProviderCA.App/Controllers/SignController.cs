@@ -1,4 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using Directum.Core.UniversalProvider.WebApiModels;
 using Directum.Core.UniversalProvider.WebApiModels.Sign;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,16 +25,28 @@ public class SignController : ControllerBase
   public async Task<ActionResult<SigningStatusInfo>> Start(
     [FromBody] SigningRequest request)
   {
-    var signingStatusInfo = request.Login switch
+    return request.Login switch
     {
-      _ => new SigningStatusInfo()
+      null => BadRequest(new Error
+      {
+        Message = "Ошибка валидации.",
+        Code = "ValidationError",
+        Details = new List<Error>
+        {
+          new()
+          {
+            Field = "Login",
+            Message = "'Login' должно быть заполнено.",
+          },
+        }
+      }),
+
+      _ => Ok(new SigningStatusInfo
       {
         Status = SigningStatus.InProgress,
         OperationId = "1",
-      },
+      }),
     };
-
-    return Ok(signingStatusInfo);
   }
 
   /// <summary>
@@ -46,15 +60,21 @@ public class SignController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<SigningStatusInfo>> GetStatus([FromRoute] string operationId)
   {
-    var signingStatusInfo = operationId switch
-    {
-      _ => new SigningStatusInfo
+    return 
+      TryGetActionResultByOperationId(operationId) ??
+      operationId switch
       {
-        Status = SigningStatus.NeedConfirm,
-        OperationId = operationId,
-      },
-    };
-    return Ok(signingStatusInfo);
+        "SuccessStatus" => Ok(new SigningStatusInfo
+        {
+          Status = SigningStatus.Success,
+          OperationId = operationId,
+        }),
+        _ => Ok(new SigningStatusInfo
+        {
+          Status = SigningStatus.NeedConfirm,
+          OperationId = operationId,
+        }),
+      };
   }
 
   /// <summary>
@@ -69,27 +89,28 @@ public class SignController : ControllerBase
   public async Task<ActionResult<ConfirmationInfo>> CreateConfirmationRequest(
     [FromRoute] string operationId)
   {
-    var confirmationInfo = operationId switch
-    {
-      _ => new ConfirmationInfo
+    return 
+      TryGetActionResultByOperationId(operationId) ??
+      operationId switch
       {
-        ConfirmationType = ConfirmationType.MobileApp,
-        ConfirmationData = new[]
+        _ => Ok(new ConfirmationInfo
         {
-          new ConfirmationData
+          ConfirmationType = ConfirmationType.MobileApp,
+          ConfirmationData = new[]
           {
-            Type = ConfirmationDataType.Link,
-            Data = "Link",
+            new ConfirmationData
+            {
+              Type = ConfirmationDataType.Link,
+              Data = "Link",
+            },
+            new ConfirmationData
+            {
+              Type = ConfirmationDataType.QrCode,
+              Data = "QrCode",
+            },
           },
-          new ConfirmationData
-          {
-            Type = ConfirmationDataType.QrCode,
-            Data = "QrCode",
-          },
-        },
-      }
-    };
-    return Ok(confirmationInfo);
+        }),
+      };
   }
 
   /// <summary>
@@ -105,7 +126,18 @@ public class SignController : ControllerBase
     [FromRoute] string operationId,
     [FromQuery][MaybeNull] string confirmationCode)
   {
-    return Ok();
+    return 
+      TryGetActionResultByOperationId(operationId) ??
+      operationId switch
+      {
+        "UserNotSignDocumentInExternalApp" => BadRequest(new Error
+        {
+          Message = "Документы еще не подписаны. Попробуйте позже.",
+          Code = "UnconfirmedSigningStatusError"
+        }),
+
+        _ => Ok()
+      };
   }
 
   /// <summary>
@@ -119,19 +151,46 @@ public class SignController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<ActionResult<SigningResult[]>> GetSigns([FromRoute] string operationId)
   {
-    var signs = new SigningResult[]
+    return 
+      TryGetActionResultByOperationId(operationId) ??
+      Ok(new SigningResult[]
+        {
+          new()
+          {
+            DocumentName = "DocumentName1",
+            Signature = "Signature1",
+          },
+          new()
+          {
+            DocumentName = "DocumentName2",
+            Signature = "Signature1",
+          },
+        });
+  }
+
+  /// <summary>
+  /// Генерирует ошибку по ключевой строке.
+  /// </summary>
+  /// <param name="operationId">Переданный идентификатор подписания.</param>
+  private ActionResult? TryGetActionResultByOperationId(string operationId)
+  {
+    return operationId switch
     {
-      new SigningResult
+      "OperationIdNotExitst" => NotFound(new Error
       {
-        DocumentName = "DocumentName1",
-        Signature = "Signature1",
-      },
-      new SigningResult
-      {
-        DocumentName = "DocumentName2",
-        Signature = "Signature1",
-      },
+        Message = "Поток подписания не найден.",
+        Code = "NotFoundError",
+      }),
+
+      "UnexpectedServerError" => StatusCode(
+        (int)HttpStatusCode.InternalServerError, 
+        new Error 
+        { 
+          Message =  "Произошла неожиданная ошибка сервера, которая не была обработана",
+          Code = "InternalServerError",
+        }),
+
+      _ => null,
     };
-    return Ok(signs);
   }
 }
