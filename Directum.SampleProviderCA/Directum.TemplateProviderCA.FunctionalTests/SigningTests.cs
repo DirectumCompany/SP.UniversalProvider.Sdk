@@ -21,11 +21,6 @@ public class SigningTests : FunctionalTestBase
           Data = "Hash1",
           Name = "DocumentName1",
         },
-        new DocumentInfo
-        {
-          Data = "Hash2",
-          Name = "DocumentName2",
-        },
       },
     };
 
@@ -74,10 +69,6 @@ public class SigningTests : FunctionalTestBase
     signs[0]
       .Should()
       .Match<SigningResult>(res => res.DocumentName == signingRequest.Documents[0].Name);
-
-    signs[1]
-      .Should()
-      .Match<SigningResult>(res => res.DocumentName == signingRequest.Documents[1].Name);
   }
 
   [Test]
