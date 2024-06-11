@@ -44,7 +44,7 @@ public class SignController : ControllerBase
       _ => Ok(new SigningStatusInfo
       {
         Status = SigningStatus.InProgress,
-        OperationId = "1",
+        OperationId = "ca3a9302-7992-464a-8fc7-0bdf875df00d",
       }),
     };
   }
@@ -158,11 +158,6 @@ public class SignController : ControllerBase
           new()
           {
             DocumentName = "DocumentName1",
-            Signature = "Signature1",
-          },
-          new()
-          {
-            DocumentName = "DocumentName2",
             Signature = "Signature1",
           },
         });
