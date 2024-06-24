@@ -1,0 +1,23 @@
+version: '3.9'
+
+volumes:
+  postgres-data:
+
+services:
+  sampleprovider:
+    image: devregistry.directum.ru/hrpro/directum.ca.sample-provider:dev
+    container_name: sampleprovider
+    build:
+      context: ..
+      dockerfile: Directum.TemplateProviderCA.App/Dockerfile
+      args:
+        PAT: ${PAT}
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:80;"
+      Authentication__TrustedIssuers__0__EncryptionKey: ""
+      Authentication__TrustedIssuers__0__SigningCertificatePath: "/certificates/ids-jwt-76d8.crt"
+    volumes:
+      - ./certificates:/certificates:ro
+    ports:
+      - 8927:80
