@@ -44,7 +44,7 @@ public class SigningTests : FunctionalTestBase
       .Should()
       .Be(SigningStatus.NeedConfirm);
 
-    await _signClient.Confirm(signingStatus.OperationId, "1");
+    await _signClient.Confirm(signingStatus.OperationId, null);
 
     signingStatus = await _signClient.GetStatus("SuccessStatus");
 
@@ -141,6 +141,6 @@ public class SigningTests : FunctionalTestBase
 
     var confirmationInfo = await _signClient.CreateConfirmationRequest(signingStatus.OperationId);
 
-    await AssertApiException(() => _signClient.Confirm("UserNotSignDocumentInExternalApp", "1"), HttpStatusCode.BadRequest, "UnconfirmedSigningStatusError");
+    await AssertApiException(() => _signClient.Confirm("UserNotSignDocumentInExternalApp", null), HttpStatusCode.BadRequest, "UnconfirmedSigningStatusError");
   }
 }

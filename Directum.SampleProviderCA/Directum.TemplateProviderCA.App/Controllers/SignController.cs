@@ -124,7 +124,7 @@ public class SignController : ControllerBase
   [ProducesResponseType(StatusCodes.Status404NotFound)]
   public async Task<IActionResult> Confirm(
     [FromRoute] string operationId,
-    [FromQuery][MaybeNull] string confirmationCode)
+    [FromQuery] string? confirmationCode)
   {
     return 
       TryGetActionResultByOperationId(operationId) ??
