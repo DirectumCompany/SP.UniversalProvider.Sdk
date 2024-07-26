@@ -1,0 +1,27 @@
+﻿@startuml
+
+title "Диаграмма контекста в нотации C4 для описания взаимодействия с внешними сущностями"
+
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+AddBoundaryTag("v1", $borderStyle="dotted")
+
+System_Boundary(rx, "Directum RX", $tags="v1"){
+    System(rx_p, "Прикладная часть\n HR Pro", "Прикладное решение HR Pro, обеспечивающее взаимодействие с платформой подписания")
+    System(plugin, "Плагин облачного подписания", "Плагин, обеспечивающий функциональность облачного подписания в платформе Sungero.")
+}
+System(LK, "Личный кабинет", "Платформа, которая предоставляет сотрудникам компании легкий доступ к корпоративным услугам через веб-приложение.")
+System(sign_service, "SignService", "Сервис для обработки и перенаправления запросов к провайдерам подписания")
+System(universal_provider_proxy, "UniversalProviderProxy", "Универсальный сервис-посредник для провайдера.")
+System(provider, "Provider", "Провайдер ЭП")
+
+AddRelTag("dashed", $lineStyle="dashed")
+
+Rel_Right(rx_p, plugin, "Подписание", $tags=dashed)
+Rel(LK, sign_service, "Запросы на подписание", $tags=dashed)
+Rel(rx_p, sign_service, "Запросы на выпуск сертификата и управление пользователем", $tags=dashed)
+Rel(plugin, sign_service, "Запросы на подписание", $tags=dashed)
+Rel(sign_service, universal_provider_proxy, "", $tags=dashed)
+Rel(universal_provider_proxy, provider, "", $tags=dashed)
+
+@enduml
