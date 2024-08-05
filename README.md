@@ -33,7 +33,7 @@
 
 Диаграмма контекста (С4) для прокси-сервиса (**UniversalProviderProxy**) выглядит так:
 
-<image src="./Directum.SampleProviderCA/SolutionReference/C4.Context.UniversalProviderProxy.png">
+![Диаграмма контекста прокси-сервиса](Directum.SampleProviderCA/SolutionReference/C4.Context.UniversalProviderProxy.png)
 
 ### Аутентификация запросов от сервиса подписания
 
@@ -137,7 +137,7 @@
 
 Пример сущности ICertificate – записи справочника **Цифровые сертификаты**:
 
-<image src="./Directum.SampleProviderCA/SolutionReference/Запись в справочнике цифровые сертификаты.PNG">
+![Запись в справочнике цифровые сертификаты](Directum.SampleProviderCA/SolutionReference/RX.DigitalCertificate.png)
 
 В стандартной поставке решения **EssPlatformSolution** добавление записи в справочник реализовано в модуле **SignPlatform** через задачу на выпуск сертификата (CertificateIssueTask). В ней можно посмотреть реализацию работы с сертификатами от провайдеров ЭП, которые поддерживаются в стандартной поставке системы HR Pro. Рекомендуется выполнять модификацию на основе этой задачи.
 
