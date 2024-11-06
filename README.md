@@ -108,19 +108,24 @@
 
 Эти значения соответствуют параметрам, указанным в конфигурационных файлах шаблона сервиса:
 * appsettings.json:
-`"Authentication": {` \n `    "TrustedIssuers": { `
-`        "Issuer": "HrProId"`
-`         ...`
-`    }`
-` }`
+```
+"Authentication": {   
+    "TrustedIssuers": { 
+      "Issuer": "HrProId"
+        ...
+    }
+ }
+```
 * appsettings.Development.json:
-`"Authentication": {`
-`    "TrustedIssuers": {`
-`        "EncryptionKey": "ZNBSyxgFERlvXt6JbO5ujWkMAPy1d00M"`
-`        ...`
-`    }`
-`    "Audience": "SampleProviderCA"`
-`}`
+```
+"Authentication": {
+  "TrustedIssuers": {
+    "EncryptionKey": "ZNBSyxgFERlvXt6JbO5ujWkMAPy1d00M"
+    ...
+  }
+  "Audience": "SampleProviderCA"
+}
+```
 
 При изменении параметров в конфигурационных файлах необходимо в тестах задать соответствующие значения или реализовать выпуск нужного токена динамически.
 
